@@ -12,4 +12,5 @@ import java.util.List;
 public class OrderRequestDto {
 
     private List<OrderItemRequestDto> items;
+    private AddressDto deliveryAddress;
 }
