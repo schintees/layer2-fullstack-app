@@ -1,6 +1,7 @@
 package msg.onlineshopapi.integration;
 
 import msg.onlineshopapi.exception.OrderNotProcessableException;
+import msg.onlineshopapi.model.Address;
 import msg.onlineshopapi.model.Location;
 import msg.onlineshopapi.model.Order;
 import msg.onlineshopapi.model.OrderDetail;
@@ -82,6 +83,7 @@ class OrderServiceTest {
     private Location location;
     private User user;
     private StockId stockId;
+    private Address deliveryAddress;
 
     @BeforeEach
     void setUp() {
@@ -112,6 +114,13 @@ class OrderServiceTest {
         stockId = new StockId();
         stockId.setProductId(laptop.getId());
         stockId.setLocationId(location.getId());
+
+        deliveryAddress = Address.builder()
+                .country("Romania")
+                .city("Cluj-Napoca")
+                .county("Cluj")
+                .streetAddress("Strada Mihai Eminescu 5")
+                .build();
     }
 
     @AfterEach
@@ -140,6 +149,7 @@ class OrderServiceTest {
                 .build();
         Order order = Order.builder()
                 .orderDetails(new HashSet<>(Set.of(detail)))
+                .address(deliveryAddress)
                 .build();
 
         Order result = orderService.createOrder(order, user.getEmail());
@@ -147,6 +157,10 @@ class OrderServiceTest {
         assertThat(result.getId()).isNotNull();
         assertThat(result.getUser().getEmail()).isEqualTo(user.getEmail());
         assertThat(result.getOrderDetails()).hasSize(1);
+        assertThat(result.getAddress().getCountry()).isEqualTo("Romania");
+        assertThat(result.getAddress().getCity()).isEqualTo("Cluj-Napoca");
+        assertThat(result.getAddress().getCounty()).isEqualTo("Cluj");
+        assertThat(result.getAddress().getStreetAddress()).isEqualTo("Strada Mihai Eminescu 5");
 
         Stock updatedStock = stockRepository.findById(stockId).orElseThrow();
         assertThat(updatedStock.getQuantity()).isEqualTo(7);
@@ -167,6 +181,7 @@ class OrderServiceTest {
                 .build();
         Order order = Order.builder()
                 .orderDetails(new HashSet<>(Set.of(detail)))
+                .address(deliveryAddress)
                 .build();
 
         assertThatThrownBy(() -> orderService.createOrder(order, user.getEmail()))
@@ -211,6 +226,7 @@ class OrderServiceTest {
                 .build();
         Order order = Order.builder()
                 .orderDetails(new HashSet<>(Set.of(laptopDetail, mouseDetail)))
+                .address(deliveryAddress)
                 .build();
 
         Order result = orderService.createOrder(order, user.getEmail());
@@ -262,6 +278,7 @@ class OrderServiceTest {
                 .build();
         Order order = Order.builder()
                 .orderDetails(new HashSet<>(Set.of(laptopDetail, keyboardDetail)))
+                .address(deliveryAddress)
                 .build();
 
         assertThatThrownBy(() -> orderService.createOrder(order, user.getEmail()))

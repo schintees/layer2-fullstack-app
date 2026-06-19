@@ -7,6 +7,8 @@ import { CartService } from '../../../services/cart.service';
 import { ProductService } from '../../../../products/services/product.service';
 import { OrdersService } from '../../../../orders/services/orders.service';
 import { NotificationsService } from '../../../../../core/services/notifications.service';
+import { ValidationMessages } from '../../../../../core/types/providers/validation-messages';
+import { DefaultValidationMessages } from '../../../../../core/config/constants/validation.constants';
 import { MOCK_CART_ITEMS } from '../../../../../core/mocks/data/cart.mock';
 import { MOCK_PRODUCTS } from '../../../../../core/mocks/data/products.mock';
 import { MOCK_ORDERS } from '../../../../../core/mocks/data/orders.mock';
@@ -78,7 +80,8 @@ describe('CartOverviewPageComponent', () => {
                 { provide: ProductService, useValue: productServiceMock },
                 { provide: OrdersService, useValue: ordersServiceMock },
                 { provide: Router, useValue: routerMock },
-                { provide: NotificationsService, useValue: notificationsServiceMock }
+                { provide: NotificationsService, useValue: notificationsServiceMock },
+                { provide: ValidationMessages, useValue: DefaultValidationMessages }
             ]
         });
 
@@ -166,6 +169,17 @@ describe('CartOverviewPageComponent', () => {
     });
 
     describe('onCheckout()', () => {
+        const validAddress = {
+            country: 'Romania',
+            city: 'Cluj-Napoca',
+            county: 'Cluj',
+            streetAddress: 'Strada Mihai Eminescu 5'
+        };
+
+        function fillAddressForm(): void {
+            component.addressForm.patchValue(validAddress);
+        }
+
         it('should not proceed when cart is empty', () => {
             // Prepare
             cartServiceMock.items.set([]);
@@ -177,7 +191,7 @@ describe('CartOverviewPageComponent', () => {
             expect(ordersServiceMock.create).not.toHaveBeenCalled();
         });
 
-        it('should create order and navigate to orders on success', () => {
+        it('should not proceed when address form is invalid', () => {
             // Prepare
             fixture.detectChanges();
 
@@ -185,7 +199,21 @@ describe('CartOverviewPageComponent', () => {
             component.onCheckout();
 
             // Verify
+            expect(ordersServiceMock.create).not.toHaveBeenCalled();
+        });
+
+        it('should create order with address and navigate to orders on success', () => {
+            // Prepare
+            fixture.detectChanges();
+            fillAddressForm();
+
+            // Action
+            component.onCheckout();
+
+            // Verify
             expect(ordersServiceMock.create).toHaveBeenCalled();
+            const payload = ordersServiceMock.create.mock.calls[0][0];
+            expect(payload.deliveryAddress).toEqual(validAddress);
             expect(cartServiceMock.clear).toHaveBeenCalled();
             expect(notificationsServiceMock.notifySuccess).toHaveBeenCalledWith({
                 title: 'Order placed',
@@ -198,6 +226,7 @@ describe('CartOverviewPageComponent', () => {
             // Prepare
             ordersServiceMock.create.mockReturnValue(throwError(() => new Error('Failed')));
             fixture.detectChanges();
+            fillAddressForm();
 
             // Action
             component.onCheckout();
